@@ -68,6 +68,7 @@ set_target_properties(libipset PROPERTIES
     SOVERSION 1)
 target_link_libraries(libipset
     ${CORK_LIBRARIES}
+    ${CMAKE_THREADS_LIBS_INIT}
 )
 
 install(TARGETS libipset DESTINATION ${CMAKE_INSTALL_LIBDIR})

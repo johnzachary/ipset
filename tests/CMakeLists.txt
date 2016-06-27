@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------
 # Copyright © 2011, RedJack, LLC.
+#             2016, Cognize, LLC.
 # All rights reserved.
 #
 # Please see the LICENSE.txt file in this distribution for license
@@ -24,7 +25,7 @@ link_directories(${CHECK_LIBRARY_DIRS})
 
 macro(make_test test_name)
     add_executable(${test_name} ${test_name}.c)
-    target_link_libraries(${test_name} ${CHECK_LIBRARIES} libipset)
+    target_link_libraries(${test_name} ${CHECK_LIBRARIES} libipset ${CMAKE_THREAD_LIBS_INIT})
     add_test(${test_name} ${test_name})
 endmacro(make_test)
 
@@ -36,29 +37,21 @@ make_test(test-ipset)
 make_test(test-iterator)
 
 #-----------------------------------------------------------------------
-# Command-line tests
+# Configure command line tests that use cram
 
-if(TILERA)
-    configure_file(tile-test ${CMAKE_BINARY_DIR}/tile-test COPYONLY)
-endif(TILERA)
-
-find_program(
-    CRAM_EXECUTABLE
-    NAMES cram
-    HINTS ENV CRAM_DIR
-    PATH_SUFFIXES bin
-    DOC "Cram test harness"
-)
-
-if (CRAM_EXECUTABLE)
-    configure_file(ccram ${CMAKE_BINARY_DIR}/ccram COPYONLY)
-    add_test(
-        cram-tests
-        ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}
-        ${CMAKE_BINARY_DIR}/ccram
-            --cram ${CRAM_EXECUTABLE}
-            --tests ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-else (CRAM_EXECUTABLE)
-    message(WARNING "Unable to find cram test harness; skipping tests.")
-endif (CRAM_EXECUTABLE)
+find_package(PythonInterp)
+if(PYTHON_EXECUTABLE)
+    file(GLOB_RECURSE TESTS "${CMAKE_CURRENT_SOURCE_DIR}/*.t")
+    foreach(TEST ${TESTS})
+        get_filename_component(TEST_NAME "${TEST}" NAME_WE)
+        add_test(${TEST_NAME}
+                 ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}
+                 ${CMAKE_SOURCE_DIR}/tools/cram/ccram
+                    --python ${PYTHON_EXECUTABLE}
+                    --root ${CMAKE_SOURCE_DIR}
+                    --tests ${TEST}
+        )
+    endforeach(TEST)
+else(PYTHON_EXECUTABLE)
+    message(WARNING "Unable to find python. Skipping cram tests.")
+endif(PYTHON_EXECUTABLE)
